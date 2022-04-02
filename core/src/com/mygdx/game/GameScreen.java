@@ -11,7 +11,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -19,28 +18,22 @@ import com.mygdx.game.objects.AirEnemy;
 import com.mygdx.game.objects.GroundEnemy;
 import com.mygdx.game.objects.ParallaxBackground;
 import com.mygdx.game.objects.Player;
-
-import java.sql.Time;
 import java.util.Iterator;
 
 public class GameScreen implements Screen {
+    MyGdxGame game;
 
-    public enum GameState {PLAYING, PAUSED, END}
+    ConstantVal constant;
 
     public Animation<TextureRegion> playerTexture;
     public Animation<TextureRegion> groundEnemyTexture;
     public Animation<TextureRegion> airEnemyTexture;
-    MyGdxGame game; // Note it’s "MyGdxGame" not "Game"
-    ConstantVal constant;
-    GameState gameState = GameState.PLAYING;
+
     public static final float SHOOT_COOLDOWN_TIME = 1f;
     private Stage stage;
     private SpriteBatch spriteBatch;
     private OrthographicCamera camera;
 
-    Vector3 touchPos = new Vector3();
-
-    private boolean isPaused;
     Player player;
     GroundEnemy groundEnemy;
     AirEnemy airEnemy;
@@ -49,7 +42,6 @@ public class GameScreen implements Screen {
     Array<Rectangle> projectileColliders;
 
     //Game clock
-    float lastTime;
     float elapsedTime;
     float lastSpawnTime;
 
@@ -71,7 +63,6 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
 
-        isPaused = false;
         Gdx.input.setInputProcessor(stage);
 
         //background setting
@@ -98,8 +89,6 @@ public class GameScreen implements Screen {
     }
 
     private void newGame(){
-        gameState = GameState.PLAYING;
-        lastTime = System.currentTimeMillis();
         // Initialise the stateTime, aka how long the program has been running for.
         elapsedTime = 0.0f;
 
@@ -134,13 +123,13 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         elapsedTime += Gdx.graphics.getDeltaTime();
+        camera.update();
 
         // The current frame to display
         TextureRegion playerCurrFrame = playerTexture.getKeyFrame(elapsedTime, true);
         TextureRegion airCurrFrame = airEnemyTexture.getKeyFrame(elapsedTime, true);
         TextureRegion groundCurrFrame = groundEnemyTexture.getKeyFrame(elapsedTime, true);
 
-        camera.update();
         //Apply the camera's transform to the SpriteBatch so the character is drawn in the correct position on screen.
         spriteBatch.setProjectionMatrix(camera.combined);
 
@@ -154,8 +143,19 @@ public class GameScreen implements Screen {
         spriteBatch.end();
 
         if (Gdx.input.isTouched()) {
-            camera.unproject(touchPos.set(Gdx.input.getX(), 0, 0));
-            playerBoxCollider.x = touchPos.x - (110f/2);
+            if(Gdx.input.getX() < Gdx.graphics.getWidth()/3){
+                if (playerBoxCollider.x > 0) {
+                    playerBoxCollider.x -= 100 * Gdx.graphics.getDeltaTime();
+                }
+            }
+            else if (Gdx.input.getX() > Gdx.graphics.getWidth()*2/3){
+                if(playerBoxCollider.x + playerBoxCollider.width < 400){
+                    playerBoxCollider.x += 100 * Gdx.graphics.getDeltaTime();
+                }
+            }
+            else {
+                //todo projectile!
+            }
         }
 
         //check if time to spawn new enemy
