@@ -2,20 +2,26 @@ package com.mygdx.game;
 
 public class ConstantVal {
 
-    //player character spawn coordinates
-    int characterX = 60;
-    int characterY = 60;
-    int movementSpeed = 200;
+    //player character spawn coordinates and dimension
+    float characterX = 40;
+    float characterY = 40;
+    float width = 110;
+    float height = 110;
+    float movementSpeed = 200;
     float shootCooldown = 0.0f;
 
     //ground enemy
-    int gCharacterX = 1850;
-    int gCharacterY = 60;
-    int gMoveX = -250;
+    float gCharacterX = 800;
+    float gCharacterY = 30;
+    float gWidth = 156;
+    float gheight = 156;
+    float gMoveX = -250;
 
     //air enemy
-    int aCharacterX = -550;
-    int aCharacterY = 500;
-    int aMoveX = 200;
+    float aCharacterX = 0;
+    float aCharacterY = 300;
+    float aWidth = 156;
+    float aheight = 156;
+    float aMoveX = 200;
 }
 

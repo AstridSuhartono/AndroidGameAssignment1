@@ -1,8 +1,11 @@
 package com.mygdx.game.objects;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Array;
 
@@ -16,7 +19,7 @@ public class ParallaxBackground extends Actor {
     int originX, originY,rotation,srcX,srcY;
     boolean flipX,flipY;
 
-    private float speed;
+    private int speed;
 
     public ParallaxBackground(Array<Texture> textures){
         layers = textures;
@@ -33,7 +36,7 @@ public class ParallaxBackground extends Actor {
         flipX = flipY = false;
     }
 
-    public void setSpeed(float newSpeed){
+    public void setSpeed(int newSpeed){
         this.speed = newSpeed;
     }
 
@@ -43,8 +46,8 @@ public class ParallaxBackground extends Actor {
 
         scroll+=speed;
         for(int i = 0;i<layers.size;i++) {
-            srcX = scroll + i * this.LAYER_SPEED_DIFFERENCE * scroll;
-            batch.draw(layers.get(i), x, y, originX, originY, width, height, scaleX, scaleY, rotation, srcX, srcY, layers.get(i).getWidth(), layers.get(i).getHeight(), flipX, flipY);
+            srcX = scroll + i*this.LAYER_SPEED_DIFFERENCE *scroll;
+            batch.draw(layers.get(i), x, y, originX, originY, width, height,scaleX,scaleY,rotation,srcX,srcY,layers.get(i).getWidth(),layers.get(i).getHeight(),flipX,flipY);
         }
     }
 }
