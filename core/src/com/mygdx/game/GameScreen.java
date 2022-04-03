@@ -11,9 +11,14 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.badlogic.gdx.utils.Timer;
 import com.mygdx.game.objects.AirEnemy;
 import com.mygdx.game.objects.GroundEnemy;
 import com.mygdx.game.objects.ParallaxBackground;
@@ -22,14 +27,18 @@ import java.util.Iterator;
 
 public class GameScreen implements Screen {
     MyGdxGame game;
-
+    public enum GameState { RUNNING, PAUSED, GAMEOVER}
+    GameState gameState = GameState.RUNNING;
     ConstantVal constant;
-
-    public Animation<TextureRegion> playerTexture;
-    public Animation<TextureRegion> groundEnemyTexture;
+    private Skin skin;
+    //Animations
+    public Animation<TextureRegion> playerAliveTexture;
+    public Animation<TextureRegion> playerDeadTexture;
+    public Animation<TextureRegion> groundEnemyAliveTexture;
+    public Animation<TextureRegion> groundEnemyDeadTexture;
     public Animation<TextureRegion> airEnemyTexture;
 
-    public static final float SHOOT_COOLDOWN_TIME = 1f;
+    //public static final float SHOOT_COOLDOWN_TIME = 1f;
     private Stage stage;
     private SpriteBatch spriteBatch;
     private OrthographicCamera camera;
@@ -39,6 +48,7 @@ public class GameScreen implements Screen {
     AirEnemy airEnemy;
     Rectangle playerBoxCollider;
     Array<Rectangle> groundEnemies;
+    Array<Rectangle> airEnemies;
     Array<Rectangle> projectileColliders;
 
     //Game clock
@@ -49,6 +59,8 @@ public class GameScreen implements Screen {
     Sound shootSound;
     Music gameMusic;
 
+    boolean restartActive;
+
     // constructor to keep a reference to the main Game class
     public GameScreen(MyGdxGame game) {
         this.game = game;
@@ -58,7 +70,7 @@ public class GameScreen implements Screen {
         Gdx.app.log("GameScreen: ","menuScreen create");
         stage = new Stage();
         spriteBatch = new SpriteBatch();
-
+        skin = new Skin(Gdx.files.internal("gui/uiskin.json"));
         //camera setting
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
@@ -85,20 +97,38 @@ public class GameScreen implements Screen {
         parallaxBackground.setSpeed(1);
         stage.addActor(parallaxBackground);
 
+        final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
+        pauseButton.setWidth(200f);
+        pauseButton.setHeight(80f);
+        pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
+        pauseButton.getLabel().setFontScale(2f);
+        stage.addActor(pauseButton);
+        pauseButton.addListener(new ClickListener()
+        {
+            @Override
+            public void clicked (InputEvent event, float x, float y)
+            {
+                gameState = GameState.PAUSED;
+            }
+        });
+
         newGame();
     }
 
     private void newGame(){
+        gameState = GameState.RUNNING;
         // Initialise the stateTime, aka how long the program has been running for.
         elapsedTime = 0.0f;
-
         constant = new ConstantVal();
         player = new Player();
         airEnemy = new AirEnemy();
         groundEnemy = new GroundEnemy();
-        playerTexture = player.texture;
+
+        player.setState(0);
+        groundEnemy.setState(0);
+        playerAliveTexture = player.texture;
         airEnemyTexture = airEnemy.texture;
-        groundEnemyTexture = groundEnemy.texture;
+        groundEnemyAliveTexture = groundEnemy.texture;
 
         //collider bounds
         playerBoxCollider = new Rectangle();
@@ -107,17 +137,19 @@ public class GameScreen implements Screen {
         playerBoxCollider.width = constant.width;
         playerBoxCollider.height = constant.height;
         groundEnemies = new Array<>();
+        airEnemies = new Array<>();
         projectileColliders = new Array<>();
-        spawnGroundEnemy();
-        //spawnProjectile();
 
         //sound and music
         shootSound = Gdx.audio.newSound(Gdx.files.internal("projectile.wav"));
         gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bensoundscifi.mp3"));
         gameMusic.setLooping(true);
         gameMusic.play();
+
+        restartActive = false;
     }
 
+    /**Main game loop, all logic and rendering should be called from in here. */
     public void render(float f) {
         Gdx.app.log("GameScreen: ","gameScreen render");
         Gdx.gl.glClearColor(1, 1, 1, 1);
@@ -125,23 +157,36 @@ public class GameScreen implements Screen {
         elapsedTime += Gdx.graphics.getDeltaTime();
         camera.update();
 
-        // The current frame to display
-        TextureRegion playerCurrFrame = playerTexture.getKeyFrame(elapsedTime, true);
+        // The current alive frame to display
+
         TextureRegion airCurrFrame = airEnemyTexture.getKeyFrame(elapsedTime, true);
-        TextureRegion groundCurrFrame = groundEnemyTexture.getKeyFrame(elapsedTime, true);
+        TextureRegion groundAliveCurrFrame = groundEnemyAliveTexture.getKeyFrame(elapsedTime, true);
 
         //Apply the camera's transform to the SpriteBatch so the character is drawn in the correct position on screen.
         spriteBatch.setProjectionMatrix(camera.combined);
 
         stage.draw();
         spriteBatch.begin();
-        spriteBatch.draw(playerCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
-        spriteBatch.draw(airCurrFrame,constant.aCharacterX, constant.aCharacterY, constant.aWidth, constant.aheight);
-        for (Rectangle groundEnemy : groundEnemies){
-            spriteBatch.draw(groundCurrFrame, groundEnemy.x, groundEnemy.y, groundEnemy.width, groundEnemy.height);
+        if (player.getState() == 0 && gameState == GameState.RUNNING){
+            TextureRegion playerAliveCurrFrame = playerAliveTexture.getKeyFrame(elapsedTime, true);
+            spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
+            for (Rectangle airEnemy: airEnemies){
+                spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+            }
+            for (Rectangle groundEnemy : groundEnemies){
+                spriteBatch.draw(groundAliveCurrFrame, groundEnemy.x, groundEnemy.y, groundEnemy.width, groundEnemy.height);
+            }
+        } else if(player.getState() == 1){
+            playerDeadTexture = player.deadTexture;
+            float time = 0;
+            TextureRegion playerDeadCurrFrame = playerDeadTexture.getKeyFrame(2.5f, false);
+            spriteBatch.draw(playerDeadCurrFrame, playerBoxCollider.x, playerBoxCollider.y,playerBoxCollider.width, playerBoxCollider.height);
+
         }
+
         spriteBatch.end();
 
+        //player inputs
         if (Gdx.input.isTouched()) {
             if(Gdx.input.getX() < Gdx.graphics.getWidth()/3){
                 if (playerBoxCollider.x > 0) {
@@ -159,20 +204,35 @@ public class GameScreen implements Screen {
         }
 
         //check if time to spawn new enemy
-        if(TimeUtils.nanoTime() - lastSpawnTime > 10e+9){
+        if(TimeUtils.nanoTime() - lastSpawnTime > 8e+9){
             spawnGroundEnemy();
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    spawnAirEnemy();
+                }
+            }, 5);
+
         }
 
-        Iterator<Rectangle> iter = groundEnemies.iterator();
-        while (iter.hasNext()) {
-            Rectangle groundEnemyBoxCollider = iter.next();
+        Iterator<Rectangle> iterGround = groundEnemies.iterator();
+        while (iterGround.hasNext()) {
+            Rectangle groundEnemyBoxCollider = iterGround.next();
             groundEnemyBoxCollider.x -= 100 * Gdx.graphics.getDeltaTime();
             if (groundEnemyBoxCollider.x + 78 < 0)
-                iter.remove();
+                iterGround.remove();
             if (groundEnemyBoxCollider.overlaps(playerBoxCollider)) {
-                iter.remove();
-                //TODO player state die!!!
+                player.setState(1);
+                groundEnemy.setState(1);
             }
+        }
+
+        Iterator<Rectangle> iterAir = airEnemies.iterator();
+        while (iterAir.hasNext()) {
+            Rectangle airEnemyBoxCollider = iterAir.next();
+            airEnemyBoxCollider.x += 100 * Gdx.graphics.getDeltaTime();
+            if (airEnemyBoxCollider.x + 78 > 800)
+                iterAir.remove();
         }
     }
 
@@ -213,5 +273,14 @@ public class GameScreen implements Screen {
         groundEnemyBoxCollider.height = constant.gheight;
         groundEnemies.add(groundEnemyBoxCollider);
         lastSpawnTime = TimeUtils.nanoTime();
+    }
+
+    public void spawnAirEnemy(){
+        Rectangle airEnemyBoxCollider = new Rectangle();
+        airEnemyBoxCollider.x = constant.aCharacterX;
+        airEnemyBoxCollider.y = constant.aCharacterY;
+        airEnemyBoxCollider.width = constant.aWidth;
+        airEnemyBoxCollider.height = constant.aheight;
+        airEnemies.add(airEnemyBoxCollider);
     }
 }

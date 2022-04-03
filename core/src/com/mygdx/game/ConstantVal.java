@@ -15,13 +15,11 @@ public class ConstantVal {
     float gCharacterY = 30;
     float gWidth = 156;
     float gheight = 156;
-    float gMoveX = -250;
 
     //air enemy
     float aCharacterX = 0;
     float aCharacterY = 300;
     float aWidth = 156;
     float aheight = 156;
-    float aMoveX = 200;
 }
 
