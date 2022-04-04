@@ -12,11 +12,9 @@ public class GroundEnemy extends Renderer{
     int dead = 1;
     int shoot = 2;
     int state;
-    float stateTime;
+
     public GroundEnemy()
     {
-        state = alive;
-        stateTime = 0;
         //animation
         aliveTexture = loadAnimationFromSheet("Assets/ground_enemy/moving.png",3,6,0.15f);
         deadTexture = loadAnimationFromSheet("Assets/ground_enemy/dying.png",5,6, 0.15f);

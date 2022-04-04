@@ -11,12 +11,9 @@ public class Player extends Renderer {
     int dead = 1;
     int shoot = 2;
     int state;
-    float stateTime;
 
     public Player()
     {
-        state = alive;
-        stateTime = 0;
         aliveTexture = loadAnimationFromSheet("Assets/player/moving.png",6,3,0.15f);
         deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.15f);
         shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.15f);

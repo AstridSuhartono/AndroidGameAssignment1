@@ -30,15 +30,12 @@ public class GameScreen implements Screen {
     public enum GameState { RUNNING, PAUSED, GAMEOVER}
     GameState gameState = GameState.RUNNING;
     ConstantVal constant;
-    private Skin skin;
     //Animations
     public Animation<TextureRegion> playerAliveTexture;
     public Animation<TextureRegion> playerDeadTexture;
     public Animation<TextureRegion> groundEnemyAliveTexture;
     public Animation<TextureRegion> groundEnemyDeadTexture;
     public Animation<TextureRegion> airEnemyTexture;
-
-    //public static final float SHOOT_COOLDOWN_TIME = 1f;
     private Stage stage;
     private SpriteBatch spriteBatch;
     private OrthographicCamera camera;
@@ -50,16 +47,14 @@ public class GameScreen implements Screen {
     Array<Rectangle> groundEnemies;
     Array<Rectangle> airEnemies;
     Array<Rectangle> projectileColliders;
-
     //Game clock
     float elapsedTime;
+    float stateTime = 0f;
     float lastSpawnTime;
-
+    float lastShotTime;
     //Sound effect in game
     Sound shootSound;
     Music gameMusic;
-
-    boolean restartActive;
 
     // constructor to keep a reference to the main Game class
     public GameScreen(MyGdxGame game) {
@@ -67,16 +62,14 @@ public class GameScreen implements Screen {
     }
 
     public void create() {
-        Gdx.app.log("GameScreen: ","menuScreen create");
         stage = new Stage();
+        constant = new ConstantVal();
         spriteBatch = new SpriteBatch();
-        skin = new Skin(Gdx.files.internal("gui/uiskin.json"));
+        Skin skin = new Skin(Gdx.files.internal("gui/uiskin.json"));
         //camera setting
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
-
         Gdx.input.setInputProcessor(stage);
-
         //background setting
         Array<Texture> staticTextures = new Array<>();
         staticTextures.add(new Texture(Gdx.files.internal("Assets/background/background_05.png")));
@@ -86,7 +79,6 @@ public class GameScreen implements Screen {
         staticBackground.setSize(800, 480);
         staticBackground.setSpeed(0);
         stage.addActor(staticBackground);
-
         Array<Texture> parallaxTextures = new Array<>();
         parallaxTextures.add(new Texture(Gdx.files.internal("Assets/background/background_02.png")));
         parallaxTextures.add(new Texture(Gdx.files.internal("Assets/background/background_01.png")));
@@ -96,40 +88,41 @@ public class GameScreen implements Screen {
         parallaxBackground.setSize(800, 480);
         parallaxBackground.setSpeed(1);
         stage.addActor(parallaxBackground);
-
+        //buttons
         final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
         pauseButton.setWidth(200f);
         pauseButton.setHeight(80f);
         pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
         pauseButton.getLabel().setFontScale(2f);
         stage.addActor(pauseButton);
-        pauseButton.addListener(new ClickListener()
-        {
+        pauseButton.addListener(new ClickListener() {
             @Override
             public void clicked (InputEvent event, float x, float y)
             {
                 gameState = GameState.PAUSED;
             }
         });
-
+        //sound and music
+        shootSound = Gdx.audio.newSound(Gdx.files.internal("projectile.wav"));
+        gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bensoundscifi.mp3"));
+        gameMusic.setLooping(true);
+        gameMusic.play();
+        //initialise a new game
         newGame();
     }
 
     private void newGame(){
         gameState = GameState.RUNNING;
         // Initialise the stateTime, aka how long the program has been running for.
-        elapsedTime = 0.0f;
-        constant = new ConstantVal();
+        elapsedTime = 0f;
         player = new Player();
         airEnemy = new AirEnemy();
         groundEnemy = new GroundEnemy();
-
         player.setState(0);
         groundEnemy.setState(0);
         playerAliveTexture = player.texture;
         airEnemyTexture = airEnemy.texture;
         groundEnemyAliveTexture = groundEnemy.texture;
-
         //collider bounds
         playerBoxCollider = new Rectangle();
         playerBoxCollider.x = constant.characterX;
@@ -139,71 +132,20 @@ public class GameScreen implements Screen {
         groundEnemies = new Array<>();
         airEnemies = new Array<>();
         projectileColliders = new Array<>();
-
-        //sound and music
-        shootSound = Gdx.audio.newSound(Gdx.files.internal("projectile.wav"));
-        gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bensoundscifi.mp3"));
-        gameMusic.setLooping(true);
-        gameMusic.play();
-
-        restartActive = false;
     }
 
-    /**Main game loop, all logic and rendering should be called from in here. */
-    public void render(float f) {
-        Gdx.app.log("GameScreen: ","gameScreen render");
-        Gdx.gl.glClearColor(1, 1, 1, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        elapsedTime += Gdx.graphics.getDeltaTime();
-        camera.update();
+    /**The main function for updating the game state */
+    private void updateWorld(){
+        float deltaTime = Gdx.graphics.getDeltaTime();
+        stateTime += deltaTime;
 
-        // The current alive frame to display
-
-        TextureRegion airCurrFrame = airEnemyTexture.getKeyFrame(elapsedTime, true);
-        TextureRegion groundAliveCurrFrame = groundEnemyAliveTexture.getKeyFrame(elapsedTime, true);
-
-        //Apply the camera's transform to the SpriteBatch so the character is drawn in the correct position on screen.
-        spriteBatch.setProjectionMatrix(camera.combined);
-
-        stage.draw();
-        spriteBatch.begin();
-        if (player.getState() == 0 && gameState == GameState.RUNNING){
-            TextureRegion playerAliveCurrFrame = playerAliveTexture.getKeyFrame(elapsedTime, true);
-            spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
-            for (Rectangle airEnemy: airEnemies){
-                spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
-            }
-            for (Rectangle groundEnemy : groundEnemies){
-                spriteBatch.draw(groundAliveCurrFrame, groundEnemy.x, groundEnemy.y, groundEnemy.width, groundEnemy.height);
-            }
-        } else if(player.getState() == 1){
-            playerDeadTexture = player.deadTexture;
-            float time = 0;
-            TextureRegion playerDeadCurrFrame = playerDeadTexture.getKeyFrame(2.5f, false);
-            spriteBatch.draw(playerDeadCurrFrame, playerBoxCollider.x, playerBoxCollider.y,playerBoxCollider.width, playerBoxCollider.height);
-
-        }
-
-        spriteBatch.end();
-
-        //player inputs
-        if (Gdx.input.isTouched()) {
-            if(Gdx.input.getX() < Gdx.graphics.getWidth()/3){
-                if (playerBoxCollider.x > 0) {
-                    playerBoxCollider.x -= 100 * Gdx.graphics.getDeltaTime();
-                }
-            }
-            else if (Gdx.input.getX() > Gdx.graphics.getWidth()*2/3){
-                if(playerBoxCollider.x + playerBoxCollider.width < 400){
-                    playerBoxCollider.x += 100 * Gdx.graphics.getDeltaTime();
-                }
-            }
-            else {
-                //todo projectile!
+        if(Gdx.input.justTouched()){
+            if(gameState == GameState.GAMEOVER){
+                newGame();
             }
         }
 
-        //check if time to spawn new enemy
+        //spawn new enemy configuration
         if(TimeUtils.nanoTime() - lastSpawnTime > 8e+9){
             spawnGroundEnemy();
             Timer.schedule(new Timer.Task() {
@@ -212,28 +154,83 @@ public class GameScreen implements Screen {
                     spawnAirEnemy();
                 }
             }, 5);
-
         }
-
         Iterator<Rectangle> iterGround = groundEnemies.iterator();
         while (iterGround.hasNext()) {
             Rectangle groundEnemyBoxCollider = iterGround.next();
-            groundEnemyBoxCollider.x -= 100 * Gdx.graphics.getDeltaTime();
+            groundEnemyBoxCollider.x -= constant.gMoveSpeed * Gdx.graphics.getDeltaTime();
             if (groundEnemyBoxCollider.x + 78 < 0)
                 iterGround.remove();
             if (groundEnemyBoxCollider.overlaps(playerBoxCollider)) {
                 player.setState(1);
                 groundEnemy.setState(1);
+                gameState = GameState.GAMEOVER;
             }
         }
-
         Iterator<Rectangle> iterAir = airEnemies.iterator();
         while (iterAir.hasNext()) {
             Rectangle airEnemyBoxCollider = iterAir.next();
-            airEnemyBoxCollider.x += 100 * Gdx.graphics.getDeltaTime();
+            airEnemyBoxCollider.x += constant.aMoveSpeed * Gdx.graphics.getDeltaTime();
             if (airEnemyBoxCollider.x + 78 > 800)
                 iterAir.remove();
         }
+    }
+
+    /**Rendering all the animations inside the game */
+    private void drawWorld(){
+        // The current alive frame to display
+        TextureRegion playerAliveCurrFrame = playerAliveTexture.getKeyFrame(elapsedTime, true);
+        TextureRegion airCurrFrame = airEnemyTexture.getKeyFrame(elapsedTime, true);
+        TextureRegion groundAliveCurrFrame = groundEnemyAliveTexture.getKeyFrame(elapsedTime, true);
+        camera.update();
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+        //logic to draw the correct animation
+        if (player.getState() == 0 && gameState == GameState.RUNNING) {
+            spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
+            for (Rectangle airEnemy : airEnemies) {
+                spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+            }
+            for (Rectangle groundEnemy : groundEnemies) {
+                spriteBatch.draw(groundAliveCurrFrame, groundEnemy.x, groundEnemy.y, groundEnemy.width, groundEnemy.height);
+            }
+        }  else if (player.getState() == 1) {
+            //TODO
+        }
+        spriteBatch.end();
+    }
+
+    /**Main game loop, all logic and rendering should be called from in here. */
+    public void render(float f) {
+        Gdx.gl.glClearColor(1, 1, 1, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        elapsedTime += Gdx.graphics.getDeltaTime();
+        lastShotTime = TimeUtils.nanoTime();
+
+        stage.draw();
+        updateWorld();
+        drawWorld();
+
+        //player inputs
+        if (Gdx.input.isTouched()) {
+            if(Gdx.input.getX() < Gdx.graphics.getWidth()/3){
+                if (playerBoxCollider.x > 0) {
+                    playerBoxCollider.x -= constant.moveSpeed * Gdx.graphics.getDeltaTime();
+                }
+            }
+            else if (Gdx.input.getX() > Gdx.graphics.getWidth()*2/3){
+                if(playerBoxCollider.x + playerBoxCollider.width < 400){
+                    playerBoxCollider.x += constant.moveSpeed * Gdx.graphics.getDeltaTime();
+                }
+            }
+            else {
+                if(TimeUtils.nanoTime() - lastShotTime > constant.shootDelay){
+                    shootSound.play();
+                    lastShotTime = TimeUtils.nanoTime();
+                }
+            }
+        }
+
     }
 
     @Override
@@ -255,13 +252,11 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        Gdx.app.log("GameScreen: ","gameScreen show called");
         create();
     }
 
     @Override
     public void hide() {
-        Gdx.app.log("GameScreen: ","gameScreen hide called");
         Gdx.input.setInputProcessor(null);
     }
 
@@ -270,7 +265,7 @@ public class GameScreen implements Screen {
         groundEnemyBoxCollider.x = constant.gCharacterX;
         groundEnemyBoxCollider.y = constant.gCharacterY;
         groundEnemyBoxCollider.width = constant.gWidth;
-        groundEnemyBoxCollider.height = constant.gheight;
+        groundEnemyBoxCollider.height = constant.gHeight;
         groundEnemies.add(groundEnemyBoxCollider);
         lastSpawnTime = TimeUtils.nanoTime();
     }
@@ -280,7 +275,8 @@ public class GameScreen implements Screen {
         airEnemyBoxCollider.x = constant.aCharacterX;
         airEnemyBoxCollider.y = constant.aCharacterY;
         airEnemyBoxCollider.width = constant.aWidth;
-        airEnemyBoxCollider.height = constant.aheight;
+        airEnemyBoxCollider.height = constant.aHeight;
         airEnemies.add(airEnemyBoxCollider);
     }
+
 }

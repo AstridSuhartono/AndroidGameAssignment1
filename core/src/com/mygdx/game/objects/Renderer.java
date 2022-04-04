@@ -20,12 +20,11 @@ public class Renderer{
         int frameWidth = textureSheet.getWidth() / cols;
         int frameHeight = textureSheet.getHeight() / rows;
         TextureRegion[][] temp = TextureRegion.split(textureSheet, frameWidth, frameHeight);
-        Array<TextureRegion> textureFrames = new Array<TextureRegion>();
+        Array<TextureRegion> textureFrames = new Array<>();
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
                 textureFrames.add( temp[r][c] );
-        Animation<TextureRegion> anim = new Animation<TextureRegion>(duration, textureFrames);
-        return anim;
+        return new Animation<>(duration, textureFrames);
     }
 
 }
