@@ -10,6 +10,12 @@ public class ConstantVal {
     float moveSpeed = 100;
     float shootDelay = 3f;
 
+    //projectile
+    float pWidth = 32;
+    float pHeight = 32;
+    float projectileSpeed = 250;
+
+
     //ground enemy
     float gCharacterX = 800;
     float gCharacterY = 30;
@@ -23,6 +29,7 @@ public class ConstantVal {
     float aWidth = 156;
     float aHeight = 156;
     float aMoveSpeed = 100;
+
 
 }
 

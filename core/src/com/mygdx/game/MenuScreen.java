@@ -20,14 +20,12 @@ public class MenuScreen implements Screen {
     private Stage stage;
     private SpriteBatch batch;
 
-
     // constructor to keep a reference to the main Game class
     public MenuScreen(MyGdxGame game) {
         this.game = game;
     }
 
     public void create() {
-        Gdx.app.log("MenuScreen: ","menuScreen create");
         skin = new Skin(Gdx.files.internal("gui/uiskin.json"));
         stage = new Stage();
         batch = new SpriteBatch();
@@ -56,7 +54,6 @@ public class MenuScreen implements Screen {
                 game.setScreen(MyGdxGame.gameScreen);
             }
         });
-
         exitButton.addListener(new ClickListener()
         {
             @Override
@@ -93,14 +90,12 @@ public class MenuScreen implements Screen {
 
     @Override
     public void show() {
-        Gdx.app.log("MenuScreen: ","menuScreen show called");
         create();
 
     }
 
     @Override
     public void hide() {
-        Gdx.app.log("MenuScreen: ","menuScreen hide called");
         Gdx.input.setInputProcessor(null);
     }
 }
