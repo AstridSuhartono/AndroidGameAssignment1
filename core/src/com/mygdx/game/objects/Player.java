@@ -3,7 +3,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class Player extends Renderer {
-    public Animation<TextureRegion> texture;
     public Animation<TextureRegion> aliveTexture;
     public Animation<TextureRegion> deadTexture;
     public Animation<TextureRegion> shootTexture;
@@ -19,10 +18,6 @@ public class Player extends Renderer {
         deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.12f);
         shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.15f);
 
-        //animation
-        if (getState() == alive) texture = aliveTexture;
-        else if (getState() == dead) texture = deadTexture;
-        else if (getState() == shoot) texture = shootTexture;
     }
 
     public int getState() {

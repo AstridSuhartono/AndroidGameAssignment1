@@ -17,7 +17,7 @@ public class GroundEnemy extends Renderer{
     {
         //animation
         aliveTexture = loadAnimationFromSheet("Assets/ground_enemy/moving.png",3,6,0.15f);
-        deadTexture = loadAnimationFromSheet("Assets/ground_enemy/dying.png",4,6, 0.15f);
+        deadTexture = loadAnimationFromSheet("Assets/ground_enemy/dying.png",5,6, 0.15f);
         //shootTexture = loadAnimationFromSheet("Assets/ground_enemy/shooting.png",4,3,0.15f);
         if (getState() == alive) texture = aliveTexture;
         else if (getState() == dead) texture = deadTexture;
