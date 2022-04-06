@@ -39,6 +39,7 @@ public class GameScreen implements Screen {
     Animation<TextureRegion> groundEnemyDeadTexture;
     Animation<TextureRegion> airEnemyTexture;
     Texture playerProjectileImage;
+    Texture airEnemyProjectileImage;
     ParallaxBackground staticBackground;
     ParallaxBackground parallaxBackground;
     private Stage stage;
@@ -53,7 +54,10 @@ public class GameScreen implements Screen {
     Array<Rectangle> groundEnemies;
     Array<Rectangle> airEnemies;
     Array<Rectangle> playerProjectiles;
+    Array<Rectangle> airEnemyProjectiles;
+    Rectangle airEnemyProjectile;
     boolean isActiveProjectile = true;
+    boolean isActiveAirProjectile = true;
     //Game clock
     float elapsedTime;
     float elapsedTimeEnemy;
@@ -133,7 +137,9 @@ public class GameScreen implements Screen {
         groundEnemy = new GroundEnemy();
         player.setState(0);
         groundEnemy.setState(0);
+        airEnemy.setState(0);
         isActiveProjectile = true;
+        isActiveAirProjectile = true;
         //set the texture required for draw
         playerAliveTexture = player.aliveTexture;
         playerDeadTexture = player.deadTexture;
@@ -141,6 +147,7 @@ public class GameScreen implements Screen {
         groundEnemyAliveTexture = groundEnemy.aliveTexture;
         groundEnemyDeadTexture = groundEnemy.deadTexture;
         playerProjectileImage = new Texture(Gdx.files.internal("Assets/player/projectile.png"));
+        airEnemyProjectileImage = new Texture(Gdx.files.internal("Assets/air_enemy/projectile.png"));
         //colliders for player and enemies
         playerBoxCollider = new Rectangle();
         playerBoxCollider.x = constant.characterX;
@@ -149,9 +156,11 @@ public class GameScreen implements Screen {
         playerBoxCollider.height = constant.height;
         groundEnemies = new Array<>();
         airEnemies = new Array<>();
+        airEnemyProjectiles = new Array<>();
         playerProjectiles = new Array<>();
         playerProjectile = new Rectangle();
         playerProjectiles.add(playerProjectile);
+        airEnemyProjectile = new Rectangle();
     }
 
     /**The main function for updating the game state */
@@ -234,6 +243,41 @@ public class GameScreen implements Screen {
                 airEnemyBoxCollider.x += constant.aMoveSpeed * Gdx.graphics.getDeltaTime();
                 if (airEnemyBoxCollider.x + 78 > 800)
                     iterAir.remove();
+                if (airEnemyBoxCollider.getX() == playerBoxCollider.getX()){
+                    airEnemy.setState(1);
+                    Rectangle airEnemyProjectile = new Rectangle();
+                    airEnemyProjectile.x = airEnemyBoxCollider.getX();
+                    airEnemyProjectile.y = airEnemyProjectile.getY();
+                    airEnemyProjectile.width = constant.pWidth;
+                    airEnemyProjectile.height = constant.pHeight;
+                    airEnemyProjectiles.add(airEnemyProjectile);
+                    Iterator<Rectangle> iterAirProjectile = airEnemyProjectiles.iterator();
+                    while (iterAirProjectile.hasNext()){
+                        airEnemyProjectile = iterAirProjectile.next();
+                        airEnemyProjectile.y -= constant.aProjectileSpeed * Gdx.graphics.getDeltaTime();
+                        Timer.schedule(new Timer.Task() {
+                            @Override
+                            public void run() {
+                                airEnemy.setState(0);
+                            }
+                        }, 1.5f);
+                        if (airEnemyProjectile.y < 60){
+                            isActiveAirProjectile = false;
+                            iterAirProjectile.remove();
+                        }
+                        if(isActiveAirProjectile){
+                            if (airEnemyProjectile.overlaps(playerBoxCollider)) {
+                                player.setState(1);
+                                stateTime = 0;
+                                elapsedTime = stateTime;
+                                elapsedTime += Gdx.graphics.getDeltaTime();
+                                iterAirProjectile.remove();
+                                gameState = GameState.GAMEOVER;
+                                parallaxBackground.setSpeed(0);
+                            }
+                        }
+                    }
+                }
             }
             Iterator<Rectangle> iterProjectile = playerProjectiles.iterator();
             while (iterProjectile.hasNext()) {
@@ -274,8 +318,15 @@ public class GameScreen implements Screen {
                 spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
                 spriteBatch.draw(playerProjectileImage, playerProjectile.x, playerProjectile.y, playerProjectile.width, playerProjectile.height);
             }
-            for (Rectangle airEnemy : airEnemies) {
-                spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+            if(airEnemy.getState() == 0){
+                for (Rectangle airEnemy : airEnemies) {
+                    spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+                }
+            } else if(airEnemy.getState() == 1) {
+                    for (Rectangle airEnemy : airEnemies) {
+                        spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+                        spriteBatch.draw(airEnemyProjectileImage, airEnemyProjectile.x, airEnemyProjectile.y, airEnemyProjectile.width, airEnemyProjectile.height);
+                    }
             }
             if (groundEnemy.getState() == 0){
                 for (Rectangle groundEnemy : groundEnemies) {
@@ -354,5 +405,6 @@ public class GameScreen implements Screen {
         airEnemyBoxCollider.height = constant.aHeight;
         airEnemies.add(airEnemyBoxCollider);
     }
+
 
 }

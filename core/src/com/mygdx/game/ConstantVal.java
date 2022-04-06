@@ -28,6 +28,7 @@ public class ConstantVal {
     float aWidth = 156;
     float aHeight = 156;
     float aMoveSpeed = 100;
+    float aProjectileSpeed = 150;
 
 
 }
