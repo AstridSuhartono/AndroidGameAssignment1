@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -30,39 +31,44 @@ import java.util.Iterator;
 public class GameScreen implements Screen {
     MyGdxGame game;
     public enum GameState { RUNNING, PAUSED, GAMEOVER}
-    GameState gameState = GameState.RUNNING;
+    GameState gameState;
     ConstantVal constant;
     //Animations
     Animation<TextureRegion> playerAliveTexture;
     Animation<TextureRegion> playerDeadTexture;
+    Animation<TextureRegion> playerShootTexture;
     Animation<TextureRegion> groundEnemyAliveTexture;
     Animation<TextureRegion> groundEnemyDeadTexture;
-    Animation<TextureRegion> airEnemyTexture;
+    Animation<TextureRegion> airEnemyAliveTexture;
+    Animation<TextureRegion> airEnemyShootTexture;
     Texture playerProjectileImage;
     Texture airEnemyProjectileImage;
+    //game background and setting
     ParallaxBackground staticBackground;
     ParallaxBackground parallaxBackground;
     private Stage stage;
     private SpriteBatch spriteBatch;
     private OrthographicCamera camera;
     public BitmapFont font;
+    //Object
     Player player;
     GroundEnemy groundEnemy;
     AirEnemy airEnemy;
     Rectangle playerBoxCollider;
     Rectangle playerProjectile;
+    Rectangle airEnemyProjectile;
     Array<Rectangle> groundEnemies;
     Array<Rectangle> airEnemies;
     Array<Rectangle> playerProjectiles;
     Array<Rectangle> airEnemyProjectiles;
-    Rectangle airEnemyProjectile;
     boolean isActiveProjectile = true;
     boolean isActiveAirProjectile = true;
     //Game clock
+    float deltaTime;
     float elapsedTime;
-    float elapsedTimeEnemy;
-    float stateTime = 0f;
-    float stateTimeEnemy = 0f;
+    float elapsedTimeGround;
+    float elapsedTimeAir;
+
     float lastSpawnTime;
     float lastShotTime;
     //Sound in game
@@ -130,20 +136,20 @@ public class GameScreen implements Screen {
         parallaxBackground.setSpeed(1);
         // Initialise the state time, aka how long the program has been running for.
         elapsedTime = 0f;
-        elapsedTimeEnemy = 0f;
+        elapsedTimeAir = 0f;
+        elapsedTimeGround = 0f;
         lastShotTime = 0f;
         player = new Player();
         airEnemy = new AirEnemy();
         groundEnemy = new GroundEnemy();
-        player.setState(0);
-        groundEnemy.setState(0);
-        airEnemy.setState(0);
         isActiveProjectile = true;
         isActiveAirProjectile = true;
         //set the texture required for draw
         playerAliveTexture = player.aliveTexture;
         playerDeadTexture = player.deadTexture;
-        airEnemyTexture = airEnemy.texture;
+        playerShootTexture = player.shootTexture;
+        airEnemyAliveTexture = airEnemy.aliveTexture;
+        airEnemyShootTexture = airEnemy.shootTexture;
         groundEnemyAliveTexture = groundEnemy.aliveTexture;
         groundEnemyDeadTexture = groundEnemy.deadTexture;
         playerProjectileImage = new Texture(Gdx.files.internal("Assets/player/projectile.png"));
@@ -156,22 +162,21 @@ public class GameScreen implements Screen {
         playerBoxCollider.height = constant.height;
         groundEnemies = new Array<>();
         airEnemies = new Array<>();
-        airEnemyProjectiles = new Array<>();
         playerProjectiles = new Array<>();
         playerProjectile = new Rectangle();
         playerProjectiles.add(playerProjectile);
         airEnemyProjectile = new Rectangle();
+        airEnemyProjectiles = new Array<>();
+        airEnemyProjectiles.add(airEnemyProjectile);
     }
 
     /**The main function for updating the game state */
     private void updateWorld() {
-        float deltaTime = Gdx.graphics.getDeltaTime();
-        stateTime += deltaTime;
-        stateTimeEnemy += deltaTime;
-
+        deltaTime += Gdx.graphics.getDeltaTime();
         //the game loop while game state is running
         if (gameState == GameState.RUNNING) {
-            if (Gdx.input.isTouched() && player.getState() == 0) {
+            //player inputs
+            if (Gdx.input.isTouched() && player.getState() == Player.State.alive) {
                 if (Gdx.input.getX() < Gdx.graphics.getWidth() / 3) {
                     if (playerBoxCollider.x > 0) {
                         playerBoxCollider.x -= constant.moveSpeed * Gdx.graphics.getDeltaTime();
@@ -182,7 +187,8 @@ public class GameScreen implements Screen {
                     }
                 } else {
                     if ((TimeUtils.nanoTime() - lastShotTime) > constant.shootDelay) {
-                        player.setState(2);
+                        player.setState(Player.State.shoot);
+                        elapsedTime = 0;
                         shootSound.play();
                         playerProjectile = new Rectangle();
                         playerProjectile.x = playerBoxCollider.getX()+55;
@@ -191,103 +197,91 @@ public class GameScreen implements Screen {
                         playerProjectile.height = constant.pHeight;
                         playerProjectiles.add(playerProjectile);
                         lastShotTime = TimeUtils.nanoTime();
+                        Timer.schedule(new Timer.Task() {
+                            @Override
+                            public void run() {
+                                player.setState(Player.State.alive);
+                            }
+                        }, 1.5f);
                     }
-                    Timer.schedule(new Timer.Task() {
-                        @Override
-                        public void run() {
-                            player.setState(0);
-                        }
-                    }, 1f);
                 }
             }
-            //spawn new enemy configuration
+            shootPlayerProjectile();
+            //spawn new enemies
             if (TimeUtils.nanoTime() - lastSpawnTime > 8e+9) {
                 spawnGroundEnemy();
-                groundEnemy.setState(0);
+                groundEnemy.setState(GroundEnemy.State.alive);
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
                         spawnAirEnemy();
+                        airEnemy.setState(AirEnemy.State.alive);
                     }
                 }, 6);
             }
+            //collision and states of ground enemy
             Iterator<Rectangle> iterGround = groundEnemies.iterator();
             while (iterGround.hasNext()) {
                 Rectangle groundEnemyBoxCollider = iterGround.next();
                 groundEnemyBoxCollider.x -= constant.gMoveSpeed * Gdx.graphics.getDeltaTime();
-                if (groundEnemyBoxCollider.x + 78 < 0)
+                if (groundEnemyBoxCollider.x - 78 < 0)
                     iterGround.remove();
-                if (groundEnemy.getState() == 0){
+                if (groundEnemy.getState() == GroundEnemy.State.alive){
                     if (groundEnemyBoxCollider.overlaps(playerBoxCollider)) {
-                        player.setState(1);
-                        stateTime = 0;
-                        elapsedTime = stateTime;
+                        player.setState(Player.State.dead);
+                        elapsedTime = 0;
                         elapsedTime += Gdx.graphics.getDeltaTime();
                         gameState = GameState.GAMEOVER;
                         parallaxBackground.setSpeed(0);
                     }
                     if (isActiveProjectile){
                         if (groundEnemyBoxCollider.overlaps(playerProjectile)){
-                            groundEnemy.setState(1);
+                            groundEnemy.setState(GroundEnemy.State.dead);
                             isActiveProjectile = false;
-                            stateTimeEnemy = 0;
-                            elapsedTimeEnemy = stateTimeEnemy;
-                            elapsedTimeEnemy += Gdx.graphics.getDeltaTime();
+                            elapsedTimeGround = 0;
+                            elapsedTimeGround += Gdx.graphics.getDeltaTime();
                          }
                     }
                 }
             }
+            //collision and states of air enemy
             Iterator<Rectangle> iterAir = airEnemies.iterator();
             while (iterAir.hasNext()) {
                 Rectangle airEnemyBoxCollider = iterAir.next();
                 airEnemyBoxCollider.x += constant.aMoveSpeed * Gdx.graphics.getDeltaTime();
-                if (airEnemyBoxCollider.x + 78 > 800)
+                if (airEnemyBoxCollider.x > 800)
                     iterAir.remove();
-                if (airEnemyBoxCollider.getX() == playerBoxCollider.getX()){
-                    airEnemy.setState(1);
-                    Rectangle airEnemyProjectile = new Rectangle();
-                    airEnemyProjectile.x = airEnemyBoxCollider.getX();
+                if (airEnemyBoxCollider.getX() >= playerBoxCollider.getX() ){
+                    airEnemy.setState(AirEnemy.State.shoot);
+                    elapsedTimeAir = 0;
+                    elapsedTimeAir += Gdx.graphics.getDeltaTime();
+                    airEnemyProjectile = new Rectangle();
+                    airEnemyProjectile.x = airEnemyBoxCollider.getX() + 84;
                     airEnemyProjectile.y = airEnemyProjectile.getY();
                     airEnemyProjectile.width = constant.pWidth;
                     airEnemyProjectile.height = constant.pHeight;
                     airEnemyProjectiles.add(airEnemyProjectile);
-                    Iterator<Rectangle> iterAirProjectile = airEnemyProjectiles.iterator();
-                    while (iterAirProjectile.hasNext()){
-                        airEnemyProjectile = iterAirProjectile.next();
-                        airEnemyProjectile.y -= constant.aProjectileSpeed * Gdx.graphics.getDeltaTime();
-                        Timer.schedule(new Timer.Task() {
-                            @Override
-                            public void run() {
-                                airEnemy.setState(0);
-                            }
-                        }, 1.5f);
-                        if (airEnemyProjectile.y < 60){
-                            isActiveAirProjectile = false;
-                            iterAirProjectile.remove();
-                        }
-                        if(isActiveAirProjectile){
-                            if (airEnemyProjectile.overlaps(playerBoxCollider)) {
-                                player.setState(1);
-                                stateTime = 0;
-                                elapsedTime = stateTime;
-                                elapsedTime += Gdx.graphics.getDeltaTime();
-                                iterAirProjectile.remove();
-                                gameState = GameState.GAMEOVER;
-                                parallaxBackground.setSpeed(0);
-                            }
-                        }
-                    }
                 }
             }
-            Iterator<Rectangle> iterProjectile = playerProjectiles.iterator();
-            while (iterProjectile.hasNext()) {
-                Rectangle playerProjectile = iterProjectile.next();
-                isActiveProjectile = true;
-                playerProjectile.x += constant.projectileSpeed * Gdx.graphics.getDeltaTime();
-                if (playerProjectile.x > playerBoxCollider.x + 300 ){
-                    isActiveProjectile = false;
-                    iterProjectile.remove();
+
+            Iterator<Rectangle> iterAirProjectile = airEnemyProjectiles.iterator();
+            while (iterAirProjectile.hasNext()){
+                Rectangle airEnemyProjectile = iterAirProjectile.next();
+                airEnemyProjectile.y -= constant.gravity * Gdx.graphics.getDeltaTime();
+                if (airEnemyProjectile.y >= 40){
+                    iterAirProjectile.remove();
                 }
+                if(isActiveAirProjectile){
+                    if (airEnemyProjectile.overlaps(playerBoxCollider)) {
+                        player.setState(Player.State.dead);
+                        iterAirProjectile.remove();
+                        elapsedTime = 0;
+                        elapsedTime += Gdx.graphics.getDeltaTime();
+                        gameState = GameState.GAMEOVER;
+                        parallaxBackground.setSpeed(0);
+                    }
+                }
+
             }
         } else if (gameState == GameState.GAMEOVER){
             if (Gdx.input.justTouched()) {
@@ -300,45 +294,52 @@ public class GameScreen implements Screen {
     /**Rendering all the animations inside the game */
     private void drawWorld(){
         // The current alive frame to display
-        TextureRegion playerAliveCurrFrame = playerAliveTexture.getKeyFrame(elapsedTime, true);
+        TextureRegion playerAliveCurrFrame = playerAliveTexture.getKeyFrame(deltaTime, true);
         TextureRegion playerDeadCurrFrame = playerDeadTexture.getKeyFrame(elapsedTime, false);
-        TextureRegion airCurrFrame = airEnemyTexture.getKeyFrame(elapsedTime, true);
-        TextureRegion groundAliveCurrFrame = groundEnemyAliveTexture.getKeyFrame(elapsedTime, true);
-        TextureRegion groundDeadCurrFrame = groundEnemyDeadTexture.getKeyFrame(elapsedTimeEnemy, false);
+        TextureRegion playerShootCurrFrame = playerShootTexture.getKeyFrame(elapsedTime, false);
+        TextureRegion airAliveCurrFrame = airEnemyAliveTexture.getKeyFrame(deltaTime, true);
+        TextureRegion airShootCurrFrame = airEnemyShootTexture.getKeyFrame(elapsedTimeAir, false);
+        TextureRegion groundAliveCurrFrame = groundEnemyAliveTexture.getKeyFrame(deltaTime, true);
+        TextureRegion groundDeadCurrFrame = groundEnemyDeadTexture.getKeyFrame(elapsedTimeGround, false);
         camera.update();
         spriteBatch.setProjectionMatrix(camera.combined);
         //start drawing based on the updateWorld() logic to draw the correct animation
-        //TODO create animation based on state for air enemy
         spriteBatch.begin();
         if (gameState == GameState.RUNNING) {
-            if (player.getState() == 0){
+
+            if (player.getState() == Player.State.alive){
                 spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
-            }
-            if (player.getState() == 2){
-                spriteBatch.draw(playerAliveCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
-                spriteBatch.draw(playerProjectileImage, playerProjectile.x, playerProjectile.y, playerProjectile.width, playerProjectile.height);
-            }
-            if(airEnemy.getState() == 0){
-                for (Rectangle airEnemy : airEnemies) {
-                    spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
-                }
-            } else if(airEnemy.getState() == 1) {
-                    for (Rectangle airEnemy : airEnemies) {
-                        spriteBatch.draw(airCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
-                        spriteBatch.draw(airEnemyProjectileImage, airEnemyProjectile.x, airEnemyProjectile.y, airEnemyProjectile.width, airEnemyProjectile.height);
+            } else if (player.getState() == Player.State.shoot){
+                if(!playerShootTexture.isAnimationFinished(elapsedTime)){
+                    spriteBatch.draw(playerShootCurrFrame, playerBoxCollider.x, playerBoxCollider.y, playerBoxCollider.width, playerBoxCollider.height);
+                    if(playerShootTexture.getKeyFrameIndex(elapsedTime) >= 9){
+                        player.setState(Player.State.alive);
                     }
+                    spriteBatch.draw(playerProjectileImage, playerProjectile.x, playerProjectile.y, playerProjectile.width, playerProjectile.height);
+                }
             }
-            if (groundEnemy.getState() == 0){
+
+            if(airEnemy.getState() == AirEnemy.State.alive){
+                for (Rectangle airEnemy : airEnemies) {
+                    spriteBatch.draw(airAliveCurrFrame, airEnemy.x, airEnemy.y, airEnemy.width, airEnemy.height);
+                }
+            } else if(airEnemy.getState() == AirEnemy.State.shoot) {
+                for (Rectangle airEnemyBox : airEnemies) {
+                    spriteBatch.draw(airShootCurrFrame, airEnemyBox.x, airEnemyBox.y, airEnemyBox.width, airEnemyBox.height);
+                    spriteBatch.draw(airEnemyProjectileImage, airEnemyProjectile.x, airEnemyProjectile.y, airEnemyProjectile.width, airEnemyProjectile.height);
+                }
+            }
+
+            if (groundEnemy.getState() == GroundEnemy.State.alive){
                 for (Rectangle groundEnemy : groundEnemies) {
                     spriteBatch.draw(groundAliveCurrFrame, groundEnemy.x, groundEnemy.y, groundEnemy.width, groundEnemy.height);
                 }
-            } else if (groundEnemy.getState() == 1) {
-                if(!groundEnemyDeadTexture.isAnimationFinished(elapsedTimeEnemy)){
-                    for (Rectangle groundEnemy : groundEnemies) {
-                        spriteBatch.draw(groundDeadCurrFrame, groundEnemy.x, groundEnemy.y-16, groundEnemy.width+12, groundEnemy.height+12);
-                    }
+            } else if (groundEnemy.getState() == GroundEnemy.State.dead) {
+                for (Rectangle groundEnemy : groundEnemies) {
+                    spriteBatch.draw(groundDeadCurrFrame, groundEnemy.x, groundEnemy.y-16, groundEnemy.width+12, groundEnemy.height+12);
                 }
             }
+
         } else if (gameState == GameState.GAMEOVER) {
             if (!playerDeadTexture.isAnimationFinished(elapsedTime)) {
                 spriteBatch.draw(playerDeadCurrFrame, playerBoxCollider.x, playerBoxCollider.y-8, playerBoxCollider.width+12, playerBoxCollider.height+12);
@@ -354,7 +355,8 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         elapsedTime += Gdx.graphics.getDeltaTime();
-        elapsedTimeEnemy += Gdx.graphics.getDeltaTime();
+        elapsedTimeGround += Gdx.graphics.getDeltaTime();
+        elapsedTimeAir += Gdx.graphics.getDeltaTime();
         stage.draw();
         updateWorld();
         drawWorld();
@@ -406,5 +408,18 @@ public class GameScreen implements Screen {
         airEnemies.add(airEnemyBoxCollider);
     }
 
+    public void shootPlayerProjectile(){
+        Iterator<Rectangle> iterProjectile = playerProjectiles.iterator();
+        while (iterProjectile.hasNext()) {
+            Rectangle playerProjectile = iterProjectile.next();
+            isActiveProjectile = true;
+            playerProjectile.x += constant.projectileSpeed * Gdx.graphics.getDeltaTime();
+            playerProjectile.y -= MathUtils.log2(constant.gravity);
+            if (playerProjectile.x > playerBoxCollider.x + 300 ){
+                isActiveProjectile = false;
+                iterProjectile.remove();
+            }
+        }
+    }
 
 }

@@ -6,25 +6,22 @@ public class Player extends Renderer {
     public Animation<TextureRegion> aliveTexture;
     public Animation<TextureRegion> deadTexture;
     public Animation<TextureRegion> shootTexture;
-
-    int alive = 0;
-    int dead = 1;
-    int shoot = 2;
-    int state;
+    public enum State {alive,dead,shoot};
+    State playerState;
 
     public Player()
     {
-        aliveTexture = loadAnimationFromSheet("Assets/player/moving.png",6,3,0.15f);
-        deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.12f);
-        shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.15f);
-
+        playerState = State.alive;
+        aliveTexture = loadAnimationFromSheet("Assets/player/moving.png",6,3,0.05f);
+        deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.1f);
+        shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.05f);
     }
 
-    public int getState() {
-        return state;
+    public State getState() {
+        return playerState;
     }
 
-    public void setState(int state) {
-        this.state = state;
+    public void setState(State state) {
+        this.playerState = state;
     }
 }
