@@ -12,9 +12,9 @@ public class Player extends Renderer {
     public Player()
     {
         playerState = State.alive;
-        aliveTexture = loadAnimationFromSheet("Assets/player/moving.png",6,3,0.05f);
-        deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.1f);
-        shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.05f);
+        aliveTexture = loadAnimationFromSheet("Assets/player/moving.png",6,3,0.06f);
+        deadTexture = loadAnimationFromSheet("Assets/player/dying.png",4,5, 0.06f);
+        shootTexture = loadAnimationFromSheet("Assets/player/shooting.png",4,3,0.12f);
     }
 
     public State getState() {

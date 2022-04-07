@@ -12,7 +12,7 @@ public class AirEnemy extends Renderer{
     public AirEnemy() {
         airState = State.alive;
         aliveTexture = loadAnimationFromSheet("Assets/air_enemy/moving.png",3,6,0.05f);
-        shootTexture = loadAnimationFromSheet("Assets/air_enemy/shooting.png",6,6,0.05f);
+        shootTexture = loadAnimationFromSheet("Assets/air_enemy/shooting.png",6,6,0.18f);
 
     }
 

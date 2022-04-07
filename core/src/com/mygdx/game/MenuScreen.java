@@ -31,16 +31,16 @@ public class MenuScreen implements Screen {
         batch = new SpriteBatch();
 
         final TextButton playButton = new TextButton("PLAY", skin, "default");
-        playButton.setWidth(300f);
-        playButton.setHeight(200f);
+        playButton.setWidth(400f);
+        playButton.setHeight(300f);
         playButton.setPosition(Gdx.graphics.getWidth() /2 - 150f, Gdx.graphics.getHeight()/2);
-        playButton.getLabel().setFontScale(4f);
+        playButton.getLabel().setFontScale(5f);
 
         final TextButton exitButton = new TextButton("EXIT", skin, "default");
-        exitButton.setWidth(300f);
-        exitButton.setHeight(200f);
-        exitButton.setPosition(Gdx.graphics.getWidth() /2 - 150f, Gdx.graphics.getHeight()/2 - 250f);
-        exitButton.getLabel().setFontScale(4f);
+        exitButton.setWidth(400f);
+        exitButton.setHeight(300f);
+        exitButton.setPosition(Gdx.graphics.getWidth() /2 - 150f, Gdx.graphics.getHeight()/2 - 350f);
+        exitButton.getLabel().setFontScale(5f);
 
         stage.addActor(playButton);
         stage.addActor(exitButton);
