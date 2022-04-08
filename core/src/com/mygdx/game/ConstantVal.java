@@ -1,8 +1,8 @@
 package com.mygdx.game;
 
 public class ConstantVal {
-    float playerGravity = 1.5f;
-    float enemyProjectileGravity = 140f;
+    float playerGravity = 4f;
+    float enemyProjectileGravity = 150f;
 
     //player character
     float characterX = 40;
@@ -20,7 +20,7 @@ public class ConstantVal {
     //ground enemy
     float gCharacterX = 800;
     float gCharacterY = 30;
-    float gWidth = 156;
+    float gWidth = 96;
     float gHeight = 156;
     float gMoveSpeed = 180;
 

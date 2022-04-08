@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -19,7 +20,7 @@ public class MenuScreen implements Screen {
     private Skin skin;
     private Stage stage;
     private SpriteBatch batch;
-
+    Music menuMusic;
     // constructor to keep a reference to the main Game class
     public MenuScreen(MyGdxGame game) {
         this.game = game;
@@ -42,6 +43,10 @@ public class MenuScreen implements Screen {
         exitButton.setPosition(Gdx.graphics.getWidth() /2 - 150f, Gdx.graphics.getHeight()/2 - 350f);
         exitButton.getLabel().setFontScale(5f);
 
+        menuMusic = Gdx.audio.newMusic(Gdx.files.internal("opening.mp3"));
+        menuMusic.setLooping(false);
+        menuMusic.play();
+
         stage.addActor(playButton);
         stage.addActor(exitButton);
         Gdx.input.setInputProcessor(stage);
@@ -51,6 +56,7 @@ public class MenuScreen implements Screen {
             @Override
             public void clicked (InputEvent event, float x, float y)
             {
+                menuMusic.stop();
                 game.setScreen(MyGdxGame.gameScreen);
             }
         });
@@ -65,9 +71,8 @@ public class MenuScreen implements Screen {
     }
 
     public void render(float f) {
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.7f, 1);
+        Gdx.gl.glClearColor(0.6f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
         batch.begin();
         stage.draw();
         batch.end();
@@ -77,6 +82,7 @@ public class MenuScreen implements Screen {
     public void dispose() {
         stage.dispose();
         batch.dispose();
+        menuMusic.dispose();
     }
 
     @Override
@@ -91,7 +97,6 @@ public class MenuScreen implements Screen {
     @Override
     public void show() {
         create();
-
     }
 
     @Override
