@@ -16,6 +16,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -47,6 +48,7 @@ public class GameScreen2 extends Renderer implements Screen {
     private SpriteBatch spriteBatch;
     private OrthographicCamera camera;
     public BitmapFont font;
+    private Label healthLabel;
     Player player;
     GroundEnemy enemy;
     Rectangle playerBoxCollider;
@@ -56,6 +58,7 @@ public class GameScreen2 extends Renderer implements Screen {
     Array<Rectangle> playerProjectiles, enemyProjectiles;
     boolean isActiveProjectile = true;
     boolean isActiveEnemyProjectile = true;
+    Integer bossHealth;
     //Game clock
     float deltaTime;
     float elapsedTime;
@@ -63,7 +66,7 @@ public class GameScreen2 extends Renderer implements Screen {
     float lastShotTime;
     float lastEShootTime;
     //Sound in game
-    Sound shootSound, explosionSound, playerDieSound, projectileSound;
+    Sound shootSound, explosionSound, playerDieSound, projectileSound, hitSound;
     Music gameMusic;
 
     public GameScreen2(MyGdxGame game) {
@@ -125,6 +128,7 @@ public class GameScreen2 extends Renderer implements Screen {
         projectileSound = Gdx.audio.newSound(Gdx.files.internal("shoot.wav"));
         explosionSound = Gdx.audio.newSound(Gdx.files.internal("explosion.wav"));
         playerDieSound = Gdx.audio.newSound(Gdx.files.internal("explosion.wav"));
+        hitSound =  Gdx.audio.newSound(Gdx.files.internal("hit.wav"));
         gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bossmusic.wav"));
         gameMusic.setLooping(true);
         gameMusic.play();
@@ -142,6 +146,7 @@ public class GameScreen2 extends Renderer implements Screen {
         elapsedTimeEnemy = 0f;
         lastShotTime = 0f;
         lastEShootTime = 0f;
+        bossHealth = constant.health;
         player = new Player();
         enemy = new GroundEnemy();
         isActiveProjectile = false;
@@ -157,6 +162,10 @@ public class GameScreen2 extends Renderer implements Screen {
         enemyProjectileImage = new Texture(Gdx.files.internal("Assets/ground_enemy/projectile.png"));
         explosionBigTexture = loadAnimationFromSheet("Assets/explosion/explosion_big.png",3,5,0.15f);
         explosionSmallTexture = loadAnimationFromSheet("Assets/explosion/explosion_small.png",1,7,0.2f);
+        healthLabel = new Label(String.format("%d", bossHealth), new Label.LabelStyle(new BitmapFont(), Color.WHITE));
+        healthLabel.setFontScale(4);
+        healthLabel.setPosition((Gdx.graphics.getWidth() * 2/3)+170, Gdx.graphics.getHeight()/2 +120);
+        stage.addActor(healthLabel);
         //colliders for player and enemies
         playerBoxCollider = new Rectangle(constant.characterX, constant.characterY, constant.width, constant.height);
         enemyBoxCollider = new Rectangle(constant.bCharacterX, constant.bCharacterY, constant.bWidth, constant.bHeight);
@@ -200,11 +209,17 @@ public class GameScreen2 extends Renderer implements Screen {
             shootPlayerProjectile();
             if (isActiveProjectile) {
                 if (playerProjectile.overlaps(enemyBoxCollider)) {
-                    enemy.setState(GroundEnemy.State.dead);
-                    explosionSound.play();
-                    elapsedTimeEnemy = 0;
-                    elapsedTimeEnemy += Gdx.graphics.getDeltaTime();
-                    gameState = GameState.WIN;
+                    bossHealth -= 1;
+                    healthLabel.setText(String.format("%d", bossHealth));
+                    hitSound.play();
+                    isActiveProjectile = false;
+                    if (bossHealth == 0) {
+                        enemy.setState(GroundEnemy.State.dead);
+                        explosionSound.play();
+                        elapsedTimeEnemy = 0;
+                        elapsedTimeEnemy += Gdx.graphics.getDeltaTime();
+                        gameState = GameState.WIN;
+                    }
                 }
             }
             if ((TimeUtils.nanoTime() - lastEShootTime) > constant.bossShootDelay && enemy.getState() == GroundEnemy.State.alive) {
@@ -287,7 +302,7 @@ public class GameScreen2 extends Renderer implements Screen {
             }else if (enemy.getState() == GroundEnemy.State.shoot){
                 spriteBatch.draw(enemyProjectileImage, enemyProjectile.x, enemyProjectile.y, enemyProjectile.width, enemyProjectile.height);
                 if(!enemyShootTexture.isAnimationFinished(elapsedTimeEnemy)){
-                    spriteBatch.draw(groundShootCurrFrame, enemyBoxCollider.x, enemyBoxCollider.y, 300, 250);
+                    spriteBatch.draw(groundShootCurrFrame, enemyBoxCollider.x, enemyBoxCollider.y, enemyBoxCollider.width, enemyBoxCollider.height);
                     if(enemyShootTexture.getKeyFrameIndex(elapsedTimeEnemy) >= 9){
                         enemy.setState(GroundEnemy.State.alive);
                     }
@@ -305,6 +320,7 @@ public class GameScreen2 extends Renderer implements Screen {
             font.getData().setScale(2);
             font.draw(spriteBatch, "GAME PAUSED", 300, 240);
         } else if (gameState == GameState.WIN){
+            parallaxBackground.setSpeed(0);
             font.setColor(Color.GOLD);
             font.getData().setScale(2);
             font.draw(spriteBatch, "YOU WIN THE GAME!", 250, 240);

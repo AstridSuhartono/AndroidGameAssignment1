@@ -5,7 +5,7 @@ import com.badlogic.gdx.math.MathUtils;
 public class ConstantVal {
     float playerGravity = 4f;
     float enemyProjectileGravity = 150f;
-    float bossGravity = MathUtils.random(15f, 200f);
+    float bossGravity = MathUtils.random(135f, 150f);
 
     //player character
     float characterX = 40;
@@ -41,5 +41,6 @@ public class ConstantVal {
     float bHeight = 250;
     float bossShootDelay = 6e+9f;
     float bProjSpeed = -200f;
+    Integer health = 4;
 }
 
