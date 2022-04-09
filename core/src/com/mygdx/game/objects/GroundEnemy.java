@@ -6,7 +6,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public class GroundEnemy extends Renderer{
     public Animation<TextureRegion> aliveTexture;
     public Animation<TextureRegion> deadTexture;
-    public enum State {alive,dead};
+    public Animation<TextureRegion> shootTexture;
+    public enum State {alive,dead,shoot};
     State groundState;
 
 
@@ -15,6 +16,7 @@ public class GroundEnemy extends Renderer{
         //animation
         aliveTexture = loadAnimationFromSheet("Assets/ground_enemy/moving.png",3,6,0.1f);
         deadTexture = loadAnimationFromSheet("Assets/ground_enemy/dying.png",5,6, 0.1f);
+        shootTexture = loadAnimationFromSheet("Assets/ground_enemy/shooting.png",4,3,0.1f);
     }
 
     public State getState() {

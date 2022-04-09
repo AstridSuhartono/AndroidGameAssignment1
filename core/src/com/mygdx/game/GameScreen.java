@@ -16,6 +16,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -35,6 +36,9 @@ public class GameScreen extends Renderer implements Screen  {
     GameState gameState;
     private Skin skin;
     ConstantVal constant;
+    private Integer score;
+    private Label scoreLabel;
+    private Label scoreAcumLabel;
     //Animations
     Animation<TextureRegion> playerAliveTexture, playerDeadTexture, playerShootTexture ;
     Animation<TextureRegion> groundEnemyAliveTexture, groundEnemyDeadTexture;
@@ -106,6 +110,7 @@ public class GameScreen extends Renderer implements Screen  {
         parallaxBackground.setSize(800, 480);
         parallaxBackground.setSpeed(2);
         stage.addActor(parallaxBackground);
+
         //pause button
         final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
         pauseButton.setWidth(200f);
@@ -133,6 +138,7 @@ public class GameScreen extends Renderer implements Screen  {
         explosionSound = Gdx.audio.newSound(Gdx.files.internal("explosion.wav"));
         playerDieSound = Gdx.audio.newSound(Gdx.files.internal("explosion.wav"));
         gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bensoundscifi.mp3"));
+        gameMusic.setVolume(0.6f);
         gameMusic.setLooping(true);
         gameMusic.play();
         //initialise a new game
@@ -142,6 +148,7 @@ public class GameScreen extends Renderer implements Screen  {
     private void newGame(){
         gameState = GameState.RUNNING;
         gameOverStage.clear();
+        score = 0;
         parallaxBackground.setSpeed(2);
         // Initialise the state time, aka how long the program has been running for.
         deltaTime = 0f;
@@ -168,6 +175,14 @@ public class GameScreen extends Renderer implements Screen  {
         airEnemyProjectileImage = new Texture(Gdx.files.internal("Assets/air_enemy/projectile.png"));
         explosionBigTexture = loadAnimationFromSheet("Assets/explosion/explosion_big.png",3,5,0.15f);
         explosionSmallTexture = loadAnimationFromSheet("Assets/explosion/explosion_small.png",1,7,0.2f);
+        scoreAcumLabel = new Label(String.format("%05d", score), new Label.LabelStyle(new BitmapFont(), Color.WHITE));
+        scoreAcumLabel.setFontScale(3);
+        scoreAcumLabel.setPosition(Gdx.graphics.getWidth()/3, Gdx.graphics.getHeight() - 90);
+        scoreLabel = new Label("SCORE:", new Label.LabelStyle(new BitmapFont(), Color.WHITE));
+        scoreLabel.setFontScale(3);
+        scoreLabel.setPosition(Gdx.graphics.getWidth()/3, Gdx.graphics.getHeight() - 50);
+        stage.addActor(scoreAcumLabel);
+        stage.addActor(scoreLabel);
         //colliders for player and enemies
         playerBoxCollider = new Rectangle(constant.characterX, constant.characterY, constant.width, constant.height);
         groundEnemies = new Array<>();
@@ -181,6 +196,10 @@ public class GameScreen extends Renderer implements Screen  {
         elapsedTime += Gdx.graphics.getDeltaTime();
         elapsedTimeGround += Gdx.graphics.getDeltaTime();
         elapsedTimeAir += Gdx.graphics.getDeltaTime();
+        if (score >= 500){
+            gameMusic.stop();
+            game.setScreen(MyGdxGame.gameScreen2);
+        }
         //the game loop while game state is running
         if (gameState == GameState.RUNNING) {
             if (Gdx.input.isTouched() && player.getState() == Player.State.alive) {
@@ -219,7 +238,7 @@ public class GameScreen extends Renderer implements Screen  {
                 }
             }
             if (deltaTime >= 8f){
-                if (TimeUtils.nanoTime() - lastAirSpawnTime > 8e+9) {
+                if (TimeUtils.nanoTime() - lastAirSpawnTime > 9e+9) {
                     spawnAirEnemy();
                     airEnemy.setState(AirEnemy.State.alive);
                 }
@@ -247,6 +266,8 @@ public class GameScreen extends Renderer implements Screen  {
                             isActiveProjectile = false;
                             elapsedTimeGround = 0;
                             elapsedTimeGround += Gdx.graphics.getDeltaTime();
+                            score += 100;
+                            scoreAcumLabel.setText(String.format("%05d", score));
                         }
                     }
                 }
@@ -264,7 +285,7 @@ public class GameScreen extends Renderer implements Screen  {
                     projectileSound.play();
                     elapsedTimeAir = 0;
                     elapsedTimeAir += Gdx.graphics.getDeltaTime();
-                    airEnemyProjectile = new Rectangle(airEnemyBoxCollider.getX() + 92, airEnemyBoxCollider.getY(),30, 30);
+                    airEnemyProjectile = new Rectangle(airEnemyBoxCollider.getX() + 82, airEnemyBoxCollider.getY(),30, 30);
                     airEnemyProjectiles.add(airEnemyProjectile);
                     isActiveAirProjectile = true;
                     Timer.schedule(new Timer.Task() {
@@ -364,9 +385,11 @@ public class GameScreen extends Renderer implements Screen  {
                 spriteBatch.draw(playerExplodeCurrFrame, playerBoxCollider.x, playerBoxCollider.y-8, playerBoxCollider.width+24, playerBoxCollider.height+24);
             }
             font.setColor(Color.BLUE);
+            font.getData().setScale(2);
             font.draw(spriteBatch, "GAME OVER! CLICK THE BUTTON TO RESTART", 250, 350);
         } else if (gameState == GameState.PAUSED){
             font.setColor(Color.BLUE);
+            font.getData().setScale(2);
             font.draw(spriteBatch, "GAME PAUSED", 350, 240);
         }
         spriteBatch.end();
@@ -383,7 +406,7 @@ public class GameScreen extends Renderer implements Screen  {
         if (gameState == GameState.PAUSED) {
             Gdx.gl.glClearColor(1, 1, 1, 1);
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-            deltaTime = 0;
+            deltaTime += 0;
             stage.draw();
             updateWorld();
             drawWorld();

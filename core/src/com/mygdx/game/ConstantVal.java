@@ -1,8 +1,11 @@
 package com.mygdx.game;
 
+import com.badlogic.gdx.math.MathUtils;
+
 public class ConstantVal {
     float playerGravity = 4f;
     float enemyProjectileGravity = 150f;
+    float bossGravity = MathUtils.random(15f, 200f);
 
     //player character
     float characterX = 40;
@@ -27,8 +30,16 @@ public class ConstantVal {
     //air enemy
     float aCharacterX = 0;
     float aCharacterY = 264;
-    float aWidth = 200;
-    float aHeight = 200;
+    float aWidth = 180;
+    float aHeight = 180;
     float aMoveSpeed = 120;
+
+    //boss enemy
+    float bCharacterX = 500;
+    float bCharacterY = 30;
+    float bWidth = 250;
+    float bHeight = 250;
+    float bossShootDelay = 6e+9f;
+    float bProjSpeed = -200f;
 }
 

@@ -14,11 +14,13 @@ public class MyGdxGame extends Game implements ApplicationListener {
 	public static MenuScreen menuScreen;
 	// The class with the game
 	public static GameScreen gameScreen;
+	public static GameScreen2 gameScreen2;
 
 
 	@Override
 	public void create() {
 		gameScreen = new GameScreen(this);
+		gameScreen2 = new GameScreen2(this);
 		menuScreen = new MenuScreen(this);
 
 		// Change screens to the menu

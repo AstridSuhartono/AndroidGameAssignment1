@@ -57,7 +57,7 @@ public class MenuScreen implements Screen {
             public void clicked (InputEvent event, float x, float y)
             {
                 menuMusic.stop();
-                game.setScreen(MyGdxGame.gameScreen);
+                game.setScreen(MyGdxGame.gameScreen2);
             }
         });
         exitButton.addListener(new ClickListener()
