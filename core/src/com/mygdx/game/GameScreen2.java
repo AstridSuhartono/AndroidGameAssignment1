@@ -1,5 +1,7 @@
 package com.mygdx.game;
 
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeIn;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
@@ -23,7 +25,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.Timer;
-import com.mygdx.game.objects.AirEnemy;
 import com.mygdx.game.objects.GroundEnemy;
 import com.mygdx.game.objects.ParallaxBackground;
 import com.mygdx.game.objects.Player;
@@ -37,12 +38,14 @@ public class GameScreen2 extends Renderer implements Screen {
     GameState gameState;
     private Skin skin;
     ConstantVal constant;
+    //Animations and textures
     Animation<TextureRegion> playerAliveTexture, playerDeadTexture, playerShootTexture;
     Animation<TextureRegion> enemyAliveTexture, enemyDeadTexture, enemyShootTexture;
     Animation<TextureRegion> explosionSmallTexture, explosionBigTexture;
     Texture playerProjectileImage;
     Texture enemyProjectileImage;
     ParallaxBackground staticBackground, parallaxBackground;
+    //object
     private Stage stage;
     private Stage gameOverStage;
     private SpriteBatch spriteBatch;
@@ -69,6 +72,7 @@ public class GameScreen2 extends Renderer implements Screen {
     Sound shootSound, explosionSound, playerDieSound, projectileSound, hitSound;
     Music gameMusic;
 
+    // constructor to keep a reference to the main Game class
     public GameScreen2(MyGdxGame game) {
         this.game = game;
     }
@@ -83,7 +87,6 @@ public class GameScreen2 extends Renderer implements Screen {
         //camera setting
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
-        Gdx.input.setInputProcessor(stage);
         //background setting
         Array<Texture> staticTextures = new Array<>();
         staticTextures.add(new Texture(Gdx.files.internal("Assets/background/background_05.png")));
@@ -102,27 +105,6 @@ public class GameScreen2 extends Renderer implements Screen {
         parallaxBackground.setSize(800, 480);
         parallaxBackground.setSpeed(2);
         stage.addActor(parallaxBackground);
-        //pause button
-        final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
-        pauseButton.setWidth(200f);
-        pauseButton.setHeight(80f);
-        pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
-        pauseButton.getLabel().setFontScale(2f);
-        stage.addActor(pauseButton);
-        pauseButton.addListener(new ClickListener() {
-            @Override
-            public void clicked (InputEvent event, float x, float y)
-            {
-                if (gameState == GameState.RUNNING){
-                    gameState = GameState.PAUSED;
-                    parallaxBackground.setSpeed(0);
-                }
-                else if (gameState == GameState.PAUSED){
-                    gameState = GameState.RUNNING;
-                    parallaxBackground.setSpeed(2);
-                }
-            }
-        });
         //sound and music
         shootSound = Gdx.audio.newSound(Gdx.files.internal("projectile.wav"));
         projectileSound = Gdx.audio.newSound(Gdx.files.internal("shoot.wav"));
@@ -138,6 +120,7 @@ public class GameScreen2 extends Renderer implements Screen {
 
     private void newGame(){
         gameState = GameState.RUNNING;
+        Gdx.input.setInputProcessor(stage);
         gameOverStage.clear();
         parallaxBackground.setSpeed(2);
         // Initialise the state time, aka how long the program has been running for.
@@ -162,7 +145,7 @@ public class GameScreen2 extends Renderer implements Screen {
         enemyProjectileImage = new Texture(Gdx.files.internal("Assets/ground_enemy/projectile.png"));
         explosionBigTexture = loadAnimationFromSheet("Assets/explosion/explosion_big.png",3,5,0.15f);
         explosionSmallTexture = loadAnimationFromSheet("Assets/explosion/explosion_small.png",1,7,0.2f);
-        healthLabel = new Label(String.format("%d", bossHealth), new Label.LabelStyle(new BitmapFont(), Color.WHITE));
+        healthLabel = new Label(String.format("Health: %d", bossHealth), new Label.LabelStyle(new BitmapFont(), Color.WHITE));
         healthLabel.setFontScale(4);
         healthLabel.setPosition((Gdx.graphics.getWidth() * 2/3)+170, Gdx.graphics.getHeight()/2 +120);
         stage.addActor(healthLabel);
@@ -249,6 +232,27 @@ public class GameScreen2 extends Renderer implements Screen {
                     parallaxBackground.setSpeed(0);
                 }
             }
+            //pause button
+            final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
+            pauseButton.setWidth(200f);
+            pauseButton.setHeight(80f);
+            pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
+            pauseButton.getLabel().setFontScale(2f);
+            stage.addActor(pauseButton);
+            pauseButton.addListener(new ClickListener() {
+                @Override
+                public void clicked (InputEvent event, float x, float y)
+                {
+                    if (gameState == GameState.RUNNING){
+                        gameState = GameState.PAUSED;
+                        parallaxBackground.setSpeed(0);
+                    }
+                    else if (gameState == GameState.PAUSED){
+                        gameState = GameState.RUNNING;
+                        parallaxBackground.setSpeed(2);
+                    }
+                }
+            });
         } else if (gameState == GameState.GAMEOVER) {
             final TextButton restartButton = new TextButton("RESTART", skin, "default");
             restartButton.setWidth(300f);
@@ -314,6 +318,7 @@ public class GameScreen2 extends Renderer implements Screen {
                 spriteBatch.draw(playerExplodeCurrFrame, playerBoxCollider.x, playerBoxCollider.y-8, playerBoxCollider.width+24, playerBoxCollider.height+24);
             }
             font.setColor(Color.BLUE);
+            font.getData().setScale(1);
             font.draw(spriteBatch, "GAME OVER! CLICK THE BUTTON TO RESTART", 250, 300);
         } else if (gameState == GameState.PAUSED){
             font.setColor(Color.BLUE);
@@ -351,24 +356,19 @@ public class GameScreen2 extends Renderer implements Screen {
         }
         if (gameState == GameState.GAMEOVER){
             gameOverStage.draw();
+            stage.draw();
             Gdx.input.setInputProcessor(gameOverStage);
         }
     }
 
     @Override
-    public void resize(int width, int height) {
-
-    }
+    public void resize(int width, int height) { }
 
     @Override
-    public void pause() {
-
-    }
+    public void pause() { }
 
     @Override
-    public void resume() {
-
-    }
+    public void resume() { }
 
     @Override
     public void hide() {
@@ -379,6 +379,7 @@ public class GameScreen2 extends Renderer implements Screen {
     public void dispose() {
         gameMusic.dispose();
         shootSound.dispose();
+        font.dispose();
         explosionSound.dispose();
         playerDieSound.dispose();
         projectileSound.dispose();

@@ -1,5 +1,9 @@
 package com.mygdx.game;
 
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.run;
+
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
@@ -16,6 +20,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.actions.SequenceAction;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -39,7 +44,7 @@ public class GameScreen extends Renderer implements Screen  {
     private Integer score;
     private Label scoreLabel;
     private Label scoreAcumLabel;
-    //Animations
+    //Animations and textures
     Animation<TextureRegion> playerAliveTexture, playerDeadTexture, playerShootTexture ;
     Animation<TextureRegion> groundEnemyAliveTexture, groundEnemyDeadTexture;
     Animation<TextureRegion> airEnemyAliveTexture, airEnemyShootTexture;
@@ -68,7 +73,6 @@ public class GameScreen extends Renderer implements Screen  {
     float elapsedTime;
     float elapsedTimeGround;
     float elapsedTimeAir;
-
     float lastGroundSpawnTime;
     float lastAirSpawnTime;
     float lastShotTime;
@@ -91,7 +95,6 @@ public class GameScreen extends Renderer implements Screen  {
         //camera setting
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
-        Gdx.input.setInputProcessor(stage);
         //background setting
         Array<Texture> staticTextures = new Array<>();
         staticTextures.add(new Texture(Gdx.files.internal("Assets/background/background_05.png")));
@@ -110,28 +113,6 @@ public class GameScreen extends Renderer implements Screen  {
         parallaxBackground.setSize(800, 480);
         parallaxBackground.setSpeed(2);
         stage.addActor(parallaxBackground);
-
-        //pause button
-        final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
-        pauseButton.setWidth(200f);
-        pauseButton.setHeight(80f);
-        pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
-        pauseButton.getLabel().setFontScale(2f);
-        stage.addActor(pauseButton);
-        pauseButton.addListener(new ClickListener() {
-            @Override
-            public void clicked (InputEvent event, float x, float y)
-            {
-                if (gameState == GameState.RUNNING){
-                    gameState = GameState.PAUSED;
-                    parallaxBackground.setSpeed(0);
-                }
-                else if (gameState == GameState.PAUSED){
-                    gameState = GameState.RUNNING;
-                    parallaxBackground.setSpeed(2);
-                }
-            }
-        });
         //sound and music
         shootSound = Gdx.audio.newSound(Gdx.files.internal("projectile.wav"));
         projectileSound = Gdx.audio.newSound(Gdx.files.internal("airprojectile.wav"));
@@ -147,6 +128,7 @@ public class GameScreen extends Renderer implements Screen  {
 
     private void newGame(){
         gameState = GameState.RUNNING;
+        Gdx.input.setInputProcessor(stage);
         gameOverStage.clear();
         score = 0;
         parallaxBackground.setSpeed(2);
@@ -307,14 +289,34 @@ public class GameScreen extends Renderer implements Screen  {
                 }
             }
             shootAirProjectile();
+            //pause button
+            final TextButton pauseButton = new TextButton("PAUSE", skin, "default");
+            pauseButton.setWidth(200f);
+            pauseButton.setHeight(80f);
+            pauseButton.setPosition(Gdx.graphics.getWidth()- 200, Gdx.graphics.getHeight() - 100);
+            pauseButton.getLabel().setFontScale(2f);
+            stage.addActor(pauseButton);
+            pauseButton.addListener(new ClickListener() {
+                @Override
+                public void clicked (InputEvent event, float x, float y)
+                {
+                    if (gameState == GameState.RUNNING){
+                        gameState = GameState.PAUSED;
+                        parallaxBackground.setSpeed(0);
+                    }
+                    else if (gameState == GameState.PAUSED){
+                        gameState = GameState.RUNNING;
+                        parallaxBackground.setSpeed(2);
+                    }
+                }
+            });
         //state when the player died and gamestate is game over
         } else if (gameState == GameState.GAMEOVER) {
             final TextButton restartButton = new TextButton("RESTART", skin, "default");
             restartButton.setWidth(300f);
-            restartButton.setHeight(150f);
+            restartButton.setHeight(100f);
             restartButton.setPosition(Gdx.graphics.getWidth()/2 - 150, Gdx.graphics.getHeight()/2 - 75);
-            restartButton.getLabel().setFontScale(4f);
-
+            restartButton.getLabel().setFontScale(2.2f);
             gameOverStage.addActor(restartButton);
             restartButton.addListener(new ClickListener() {
                 @Override
@@ -385,12 +387,12 @@ public class GameScreen extends Renderer implements Screen  {
                 spriteBatch.draw(playerExplodeCurrFrame, playerBoxCollider.x, playerBoxCollider.y-8, playerBoxCollider.width+24, playerBoxCollider.height+24);
             }
             font.setColor(Color.BLUE);
-            font.getData().setScale(2);
-            font.draw(spriteBatch, "GAME OVER! CLICK THE BUTTON TO RESTART", 250, 350);
+            font.getData().setScale(1);
+            font.draw(spriteBatch, "GAME OVER! CLICK THE BUTTON TO RESTART", 250, 300);
         } else if (gameState == GameState.PAUSED){
             font.setColor(Color.BLUE);
             font.getData().setScale(2);
-            font.draw(spriteBatch, "GAME PAUSED", 350, 240);
+            font.draw(spriteBatch, "GAME PAUSED", 250, 240);
         }
         spriteBatch.end();
     }
@@ -420,6 +422,7 @@ public class GameScreen extends Renderer implements Screen  {
     @Override
     public void dispose() {
         gameMusic.dispose();
+        font.dispose();
         shootSound.dispose();
         explosionSound.dispose();
         playerDieSound.dispose();
